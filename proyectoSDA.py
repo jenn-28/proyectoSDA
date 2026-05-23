@@ -225,18 +225,6 @@ def main():
                     elif fin is None and posicion != inicio:
                         fin = posicion
 
-                if pygame.mouse.get_pressed()[0]:
-                    pos = pygame.mouse.get_pos()
-                    fila = pos[1]//TAMANO_CELDA
-                    col = pos[0]//TAMANO_CELDA
-                    posicion = (fila, col)
-                    muros.add(posicion)
-
-                    if inicio is not None and fin is not None:
-                        if posicion != inicio and posicion != fin:
-                         muros.add(posicion)
-
-
             if evento.type == pygame.KEYDOWN:
                 if etapa == 0:
                     if evento.key == pygame.K_1:
@@ -268,7 +256,7 @@ def main():
                     elif evento.key == pygame.K_i: 
                         algoritmo = "ITERATIVA"
                         pygame.display.set_caption("Simulador de Grafos: Etapa 1 - ITERATIVA")
-                    elif evento.key == pygame.K_c: 
+                    elif evento.key == pygame.K_m: 
                         etapa = 0
                         muros.clear() 
                         inicio=None
@@ -277,17 +265,30 @@ def main():
 
                 elif etapa == 1 and algoritmo != "":
                     if evento.key == pygame.K_SPACE:
-                        if algoritmo == "BFS":
-                            bfs(inicio, fin, muros, ventana)
-                        if algoritmo == "DFS":
-                            dfs(inicio, fin, muros, ventana)
-                        if algoritmo == "LIMITADA":
-                            limite = int(input("Introduce el limite de saltos: "))
-                            dls(inicio, fin, muros, ventana, limite, iterativa = False)
-                        if algoritmo == "ITERATIVA":
-                            iddfs(inicio, fin, muros, ventana)
-                        algoritmo = ""
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 1")
+                        if inicio is not None and fin is not None:
+                            if algoritmo == "BFS":
+                                bfs(inicio, fin, muros, ventana)
+                            if algoritmo == "DFS":
+                                dfs(inicio, fin, muros, ventana)
+                            if algoritmo == "LIMITADA":
+                                limite = int(input("Introduce el limite de saltos: "))
+                                dls(inicio, fin, muros, ventana, limite, iterativa = False)
+                            if algoritmo == "ITERATIVA":
+                                iddfs(inicio, fin, muros, ventana)
+                            algoritmo = ""
+                            pygame.display.set_caption("Simulador de Grafos: Etapa 1")
+                        else:
+                            print("Debes colocar el INICIO y el FIN en el mapa antes de iniciar.")
+
+            if etapa != 0 and inicio is not None and fin is not None:
+                if pygame.mouse.get_pressed()[0]:
+                    pos = pygame.mouse.get_pos()
+                    fila = pos[1]//TAMANO_CELDA
+                    col = pos[0]//TAMANO_CELDA
+                    posicion = (fila, col)
+
+                    if posicion != inicio and posicion != fin:
+                        muros.add(posicion)
 
         pygame.display.update()
 
