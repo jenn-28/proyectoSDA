@@ -3,6 +3,8 @@ import pygame
 import collections
 import heapq
 
+terrenos = {}
+
 
 # Configuración de colores
 BLANCO = (255, 255, 255) #Mapa
@@ -41,7 +43,7 @@ def bfs(inicio, fin, muros, ventana):
                 actual = visitados[actual]
                 pygame.display.update()
             print("BFS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
-            esperar_reinicio(muros)
+            esperar_reinicio(muros,terrenos)
             return True
 
         # Obtener vecinos (Derecha, Izquierda, Abajo, Arriba)
@@ -60,7 +62,7 @@ def bfs(inicio, fin, muros, ventana):
         pygame.display.update()
         pygame.time.delay(20) # Control de velocidad para ver el proceso
     print("BFS Finalizado. Fuiste devorado por los infectados")
-    esperar_reinicio(muros)
+    esperar_reinicio(muros,terrenos)
     return False
 
 def dfs(inicio, fin, muros, ventana):
@@ -80,7 +82,7 @@ def dfs(inicio, fin, muros, ventana):
                 actual = visitados[actual]
                 pygame.display.update()
             print("DFS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
-            esperar_reinicio(muros)
+            esperar_reinicio(muros,terrenos)
             return True
 
         # Obtener vecinos ((Derecha, Izquierda, Abajo, Arriba)
@@ -99,7 +101,7 @@ def dfs(inicio, fin, muros, ventana):
         pygame.display.update()
         pygame.time.delay(20) # Control de velocidad para ver el proceso
     print("DFS Finalizado. Fuiste devorado por los infectados")
-    esperar_reinicio(muros)
+    esperar_reinicio(muros, terrenos)
     return False
 
 def dls(inicio, fin, muros, ventana, limite, iterativa=False):
@@ -122,7 +124,7 @@ def dls(inicio, fin, muros, ventana, limite, iterativa=False):
                 print("DLS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
             elif iterativa:
                 print("IDDFS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
-            esperar_reinicio(muros)
+            esperar_reinicio(muros,terrenos)
             return True
 
         # Obtener vecinos ((Derecha, Izquierda, Abajo, Arriba) SOLO SI NO HA LLEGADO AL LIMITE
@@ -143,7 +145,7 @@ def dls(inicio, fin, muros, ventana, limite, iterativa=False):
         pygame.time.delay(20) # Control de velocidad para ver el proceso
     if not iterativa:
         print("DLS Finalizado. Fuiste devorado por los infectados")
-        esperar_reinicio(muros)
+        esperar_reinicio(muros,terrenos)
     return False
 
 def iddfs(inicio, fin, muros, ventana):
@@ -168,7 +170,7 @@ def iddfs(inicio, fin, muros, ventana):
         
         limite += 1
     print("IDDFS Finalizado. Fuiste devorado por los infectados")
-    esperar_reinicio(muros)
+    esperar_reinicio(muros,terrenos)
     return False
 
 #SEGUNDA ETAPA: A*
@@ -204,7 +206,7 @@ def algoritmo_a(inicio, fin, muros, terrenos, ventana):
             print("Nodos explorados:", nodos_explorados)
             print("Costo total:", costos[fin])
 
-            esperar_reinicio(muros)
+            esperar_reinicio(muros,terrenos)
 
             return True
 
@@ -249,7 +251,7 @@ def algoritmo_a(inicio, fin, muros, terrenos, ventana):
         pygame.time.delay(20)
 
     print("A* Finalizado. No hay camino.")
-    esperar_reinicio(muros)
+    esperar_reinicio(muros,terrenos)
 
     return False
 
@@ -280,7 +282,6 @@ def main():
     inicio = None
     fin = None
     muros = set()
-    terrenos = {}
     corriendo = True
 
     etapa = 0
@@ -352,8 +353,6 @@ def main():
                     elif evento.key == pygame.K_m: 
                         etapa = 0
                         muros.clear() 
-                        inicio=None
-                        fin=None                       
                         pygame.display.set_caption("Simulador de Grafos")
 
                 elif etapa == 1 and algoritmo != "":
@@ -385,8 +384,6 @@ def main():
                         etapa = 0
                         muros.clear() 
                         terrenos.clear()
-                        inicio=None
-                        fin=None                       
                         pygame.display.set_caption("Simulador de Grafos")    
 
                 elif etapa == 2 and algoritmo != "":
