@@ -5,7 +5,6 @@ import heapq
 
 terrenos = {}
 
-
 # Configuración de colores
 BLANCO = (255, 255, 255) #Mapa
 NEGRO = (0, 0, 0) #Muros
@@ -43,8 +42,7 @@ def bfs(inicio, fin, muros, ventana):
                 actual = visitados[actual]
                 pygame.display.update()
             print("BFS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
-            esperar_reinicio(muros,terrenos)
-            return True
+            return esperar_reinicio(muros, terrenos)
 
         # Obtener vecinos (Derecha, Izquierda, Abajo, Arriba)
         r, c = actual
@@ -62,8 +60,50 @@ def bfs(inicio, fin, muros, ventana):
         pygame.display.update()
         pygame.time.delay(20) # Control de velocidad para ver el proceso
     print("BFS Finalizado. Fuiste devorado por los infectados")
-    esperar_reinicio(muros,terrenos)
-    return False
+    return esperar_reinicio(muros, terrenos)
+
+def bfs_etapa2(inicio, fin, muros, terrenos, ventana):
+    cola = collections.deque([inicio])
+    visitados = {inicio: None}
+
+    while cola:
+        actual = cola.popleft()
+
+        if actual == fin:
+            costo_total = 0
+            nodos_camino = 0
+            
+            while actual is not None:
+                dibujar_celda(ventana, actual, AMARILLO)
+                dibujar_celda(ventana, inicio, VERDE)
+                dibujar_celda(ventana, fin, ROJO)
+                
+                nodos_camino += 1
+                if actual != inicio:
+                    costo_total = costo_total + terrenos.get(actual, 1)
+                    
+                actual = visitados[actual]
+                pygame.display.update()
+                
+            print("BFS (Etapa 2) Finalizado")
+            print("Nodos en el camino a la meta:", nodos_camino)
+            print("Costo total del camino:", costo_total)
+            return esperar_reinicio(muros, terrenos)
+
+        r, c = actual
+        for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
+            vecino = (r + dr, c + dc)
+            if 0 <= vecino[0] < FILAS and 0 <= vecino[1] < COLUMNAS:
+                if vecino not in muros and vecino not in visitados:
+                    visitados[vecino] = actual
+                    cola.append(vecino)
+                    if vecino != fin:
+                        dibujar_celda(ventana, vecino, AZUL)
+        
+        pygame.display.update()
+        pygame.time.delay(20)
+    print("BFS (Etapa 2) Finalizado. No se encontró camino.")
+    return esperar_reinicio(muros, terrenos)
 
 def dfs(inicio, fin, muros, ventana):
     conteo = 0
@@ -82,8 +122,7 @@ def dfs(inicio, fin, muros, ventana):
                 actual = visitados[actual]
                 pygame.display.update()
             print("DFS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
-            esperar_reinicio(muros,terrenos)
-            return True
+            return esperar_reinicio(muros, terrenos)
 
         # Obtener vecinos ((Derecha, Izquierda, Abajo, Arriba)
         r, c = actual
@@ -101,8 +140,7 @@ def dfs(inicio, fin, muros, ventana):
         pygame.display.update()
         pygame.time.delay(20) # Control de velocidad para ver el proceso
     print("DFS Finalizado. Fuiste devorado por los infectados")
-    esperar_reinicio(muros, terrenos)
-    return False
+    return esperar_reinicio(muros, terrenos)
 
 def dls(inicio, fin, muros, ventana, limite, iterativa=False):
     conteo = 0
@@ -122,10 +160,10 @@ def dls(inicio, fin, muros, ventana, limite, iterativa=False):
                 pygame.display.update()
             if not iterativa:
                 print("DLS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
+                return esperar_reinicio(muros, terrenos)
             elif iterativa:
                 print("IDDFS Finalizado. ENCONTRASTRE EL REFUGIO -> Cantidad de nodos visitados: ", conteo)
-            esperar_reinicio(muros,terrenos)
-            return True
+                return True # Devuelve True para romper el ciclo en IDDFS
 
         # Obtener vecinos ((Derecha, Izquierda, Abajo, Arriba) SOLO SI NO HA LLEGADO AL LIMITE
         if(profundidad < limite):
@@ -145,7 +183,7 @@ def dls(inicio, fin, muros, ventana, limite, iterativa=False):
         pygame.time.delay(20) # Control de velocidad para ver el proceso
     if not iterativa:
         print("DLS Finalizado. Fuiste devorado por los infectados")
-        esperar_reinicio(muros,terrenos)
+        return esperar_reinicio(muros, terrenos)
     return False
 
 def iddfs(inicio, fin, muros, ventana):
@@ -154,8 +192,8 @@ def iddfs(inicio, fin, muros, ventana):
     while limite <= MAX:
         band = dls(inicio, fin, muros, ventana, limite, iterativa=True)
 
-        if band:
-            return True
+        if band is True: # Encontró el camino
+            return esperar_reinicio(muros, terrenos)
         
         ventana.fill(GRIS)
         for r in range(FILAS):
@@ -170,53 +208,43 @@ def iddfs(inicio, fin, muros, ventana):
         
         limite += 1
     print("IDDFS Finalizado. Fuiste devorado por los infectados")
-    esperar_reinicio(muros,terrenos)
-    return False
+    return esperar_reinicio(muros, terrenos)
 
 #SEGUNDA ETAPA: A*
 def algoritmo_a(inicio, fin, muros, terrenos, ventana):
-
     cola = []
     heapq.heappush(cola, (0, inicio))
 
     padres = {inicio: None}
     # g(n)
     costos = {inicio: 0}
-    nodos_explorados = 0
 
     while cola:
-
         prioridad_actual, actual = heapq.heappop(cola)
-        nodos_explorados += 1
 
         # Llegó al final
         if actual == fin:
-
+            nodos_camino = 0
+            
             while actual is not None:
-
                 dibujar_celda(ventana, actual, AMARILLO)
                 dibujar_celda(ventana, inicio, VERDE)
                 dibujar_celda(ventana, fin, ROJO)
-
+                
+                nodos_camino += 1
                 actual = padres[actual]
-
                 pygame.display.update()
 
             print("A* Finalizado")
-            print("Nodos explorados:", nodos_explorados)
+            print("Nodos en el camino a la meta:", nodos_camino)
             print("Costo total:", costos[fin])
-
-            esperar_reinicio(muros,terrenos)
-
-            return True
+            return esperar_reinicio(muros, terrenos)
 
         r, c = actual
 
         # vecinos
         for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
-
             vecino = (r + dr, c + dc)
-
             if 0 <= vecino[0] < FILAS and 0 <= vecino[1] < COLUMNAS:
 
                 # ignorar muros
@@ -241,19 +269,16 @@ def algoritmo_a(inicio, fin, muros, terrenos, ventana):
                     prioridad = nuevo_costo + heuristica
 
                     heapq.heappush(cola, (prioridad, vecino))
-
                     padres[vecino] = actual
 
                     if vecino != fin:
                         dibujar_celda(ventana, vecino, CELESTE)
-
+        
         pygame.display.update()
-        pygame.time.delay(20)
+        pygame.time.delay(25)
 
     print("A* Finalizado. No hay camino.")
-    esperar_reinicio(muros,terrenos)
-
-    return False
+    return esperar_reinicio(muros, terrenos)
 
 
 def dibujar_celda(win, pos, color):
@@ -268,11 +293,11 @@ def esperar_reinicio(muros, terrenos):
                 exit()
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_r:
-                    esperando = False
+                    return "REINICIAR"
                 elif evento.key == pygame.K_l:
                     muros.clear()
                     terrenos.clear()
-                    esperando = False
+                    return "LIMPIAR"
 
 def main():
     pygame.init()
@@ -307,7 +332,6 @@ def main():
                     pos = pygame.mouse.get_pos()
                     fila = pos[1]//TAMANO_CELDA
                     col = pos[0]//TAMANO_CELDA
-
                     posicion = (fila, col)
 
                     #Primer Click INICIO
@@ -317,15 +341,19 @@ def main():
                     #Segundo click FIN
                     elif fin is None and posicion != inicio:
                         fin = posicion
+                        if etapa == 1:
+                            pygame.display.set_caption("Etapa 1: Dibuja Muros (Clic Izq.) - Elige: B, D, L o I")
+                        elif etapa == 2:
+                            pygame.display.set_caption("Etapa 2: Clic Izq = Muros | Clic Der = Lodo. Elige: A o B")
 
             if evento.type == pygame.KEYDOWN:
                 if etapa == 0:
                     if evento.key == pygame.K_1:
                         etapa = 1
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 1")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - Coloca INICIO y FIN")
                     if evento.key == pygame.K_2:
                         etapa = 2
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 2")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 2 - Coloca INICIO y FIN")
                     if evento.key == pygame.K_3:
                         etapa = 3
                         pygame.display.set_caption("Simulador de Grafos: Etapa 3")
@@ -333,42 +361,47 @@ def main():
                     etapa = 0
                     muros.clear() 
                     terrenos.clear()
-                    inicio=None
-                    fin=None     
+                    inicio = None
+                    fin = None     
                     pygame.display.set_caption("Simulador de Grafos")
+
 #ETAPA 1: BFS, DFS, DLS, IDDFS
                 elif etapa == 1 and algoritmo == "":
                     if evento.key == pygame.K_b: 
                         algoritmo = "BFS"
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - BFS")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - BFS [Presiona ESPACIO]")
                     elif evento.key == pygame.K_d: 
                         algoritmo = "DFS"
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - DFS")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - DFS [Presiona ESPACIO]")
                     elif evento.key == pygame.K_l: 
                         algoritmo = "LIMITADA"
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - LIMITADA")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - LIMITADA [Presiona ESPACIO]")
                     elif evento.key == pygame.K_i: 
                         algoritmo = "ITERATIVA"
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - ITERATIVA")
-                    elif evento.key == pygame.K_m: 
-                        etapa = 0
-                        muros.clear() 
-                        pygame.display.set_caption("Simulador de Grafos")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 1 - ITERATIVA [Presiona ESPACIO]")
 
                 elif etapa == 1 and algoritmo != "":
                     if evento.key == pygame.K_SPACE:
                         if inicio is not None and fin is not None:
+                            accion = ""
                             if algoritmo == "BFS":
-                                bfs(inicio, fin, muros, ventana)
-                            if algoritmo == "DFS":
-                                dfs(inicio, fin, muros, ventana)
-                            if algoritmo == "LIMITADA":
+                                accion = bfs(inicio, fin, muros, ventana)
+                            elif algoritmo == "DFS":
+                                accion = dfs(inicio, fin, muros, ventana)
+                            elif algoritmo == "LIMITADA":
                                 limite = int(input("Introduce el limite de saltos: "))
-                                dls(inicio, fin, muros, ventana, limite, iterativa = False)
-                            if algoritmo == "ITERATIVA":
-                                iddfs(inicio, fin, muros, ventana)
-                            algoritmo = ""
-                            pygame.display.set_caption("Simulador de Grafos: Etapa 1")
+                                accion = dls(inicio, fin, muros, ventana, limite, iterativa = False)
+                            elif algoritmo == "ITERATIVA":
+                                accion = iddfs(inicio, fin, muros, ventana)
+                            
+                            if accion == "LIMPIAR":
+                                inicio = None
+                                fin = None
+                                algoritmo = ""
+                                pygame.display.set_caption("Simulador de Grafos: Etapa 1 - Coloca INICIO y FIN")
+                            elif accion == "REINICIAR":
+                                algoritmo = ""
+                                pygame.display.set_caption("Simulador de Grafos: Etapa 1 - Elige: B, D, L o I")
                         else:
                             print("Debes colocar el INICIO y el FIN en el mapa antes de iniciar.")
 
@@ -376,25 +409,28 @@ def main():
                 elif etapa == 2 and algoritmo == "":
                     if evento.key == pygame.K_a:
                         algoritmo = "A*"
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 2 - A*")
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 2 - A* [Presiona ESPACIO]")
                     elif evento.key == pygame.K_b:
                         algoritmo = "BFS"
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 2 - BFS")
-                    elif evento.key == pygame.K_t:
-                        etapa = 0
-                        muros.clear() 
-                        terrenos.clear()
-                        pygame.display.set_caption("Simulador de Grafos")    
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 2 - BFS [Presiona ESPACIO]") 
 
                 elif etapa == 2 and algoritmo != "":
                     if evento.key == pygame.K_SPACE:
                         if inicio is not None and fin is not None:
+                            accion = ""
                             if algoritmo == "BFS":
-                                bfs(inicio, fin, muros, ventana)
-                            if algoritmo == "A*":
-                                algoritmo_a(inicio, fin, muros, terrenos, ventana)
-                            algoritmo = ""
-                            pygame.display.set_caption("Simulador de Grafos: Etapa 2")
+                                accion = bfs_etapa2(inicio, fin, muros, terrenos, ventana)
+                            elif algoritmo == "A*":
+                                accion = algoritmo_a(inicio, fin, muros, terrenos, ventana)
+                            
+                            if accion == "LIMPIAR":
+                                inicio = None
+                                fin = None
+                                algoritmo = ""
+                                pygame.display.set_caption("Simulador de Grafos: Etapa 2 - Coloca INICIO y FIN")
+                            elif accion == "REINICIAR":
+                                algoritmo = ""
+                                pygame.display.set_caption("Simulador de Grafos: Etapa 2 - Elige: A o B")
                         else:
                             print("Debes colocar el INICIO y el FIN en el mapa antes de iniciar.")
 
@@ -421,8 +457,6 @@ def main():
 
                     if posicion != inicio and posicion != fin  and posicion not in muros:
                         terrenos[posicion] = 5
-
-                    
 
         pygame.display.update()
 
