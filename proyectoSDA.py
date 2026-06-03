@@ -62,49 +62,6 @@ def bfs(inicio, fin, muros, ventana):
     print("BFS Finalizado. Fuiste devorado por los infectados")
     return esperar_reinicio(muros, terrenos)
 
-def bfs_etapa2(inicio, fin, muros, terrenos, ventana):
-    cola = collections.deque([inicio])
-    visitados = {inicio: None}
-
-    while cola:
-        actual = cola.popleft()
-
-        if actual == fin:
-            costo_total = 0
-            nodos_camino = 0
-            
-            while actual is not None:
-                dibujar_celda(ventana, actual, AMARILLO)
-                dibujar_celda(ventana, inicio, VERDE)
-                dibujar_celda(ventana, fin, ROJO)
-                
-                nodos_camino += 1
-                if actual != inicio:
-                    costo_total = costo_total + terrenos.get(actual, 1)
-                    
-                actual = visitados[actual]
-                pygame.display.update()
-                
-            print("BFS (Etapa 2) Finalizado")
-            print("Nodos en el camino a la meta:", nodos_camino)
-            print("Costo total del camino:", costo_total)
-            return esperar_reinicio(muros, terrenos)
-
-        r, c = actual
-        for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
-            vecino = (r + dr, c + dc)
-            if 0 <= vecino[0] < FILAS and 0 <= vecino[1] < COLUMNAS:
-                if vecino not in muros and vecino not in visitados:
-                    visitados[vecino] = actual
-                    cola.append(vecino)
-                    if vecino != fin:
-                        dibujar_celda(ventana, vecino, AZUL)
-        
-        pygame.display.update()
-        pygame.time.delay(20)
-    print("BFS (Etapa 2) Finalizado. No se encontró camino.")
-    return esperar_reinicio(muros, terrenos)
-
 def dfs(inicio, fin, muros, ventana):
     conteo = 0
     pila = collections.deque([inicio])
@@ -280,9 +237,70 @@ def algoritmo_a(inicio, fin, muros, terrenos, ventana):
     print("A* Finalizado. No hay camino.")
     return esperar_reinicio(muros, terrenos)
 
+def bfs_etapa2(inicio, fin, muros, terrenos, ventana):
+    cola = collections.deque([inicio])
+    visitados = {inicio: None}
+
+    while cola:
+        actual = cola.popleft()
+
+        if actual == fin:
+            costo_total = 0
+            nodos_camino = 0
+            
+            while actual is not None:
+                dibujar_celda(ventana, actual, AMARILLO)
+                dibujar_celda(ventana, inicio, VERDE)
+                dibujar_celda(ventana, fin, ROJO)
+                
+                nodos_camino += 1
+                if actual != inicio:
+                    costo_total = costo_total + terrenos.get(actual, 1)
+                    
+                actual = visitados[actual]
+                pygame.display.update()
+                
+            print("BFS (Etapa 2) Finalizado")
+            print("Nodos en el camino a la meta:", nodos_camino)
+            print("Costo total del camino:", costo_total)
+            return esperar_reinicio(muros, terrenos)
+
+        r, c = actual
+        for dr, dc in [(0,1), (0,-1), (1,0), (-1,0)]:
+            vecino = (r + dr, c + dc)
+            if 0 <= vecino[0] < FILAS and 0 <= vecino[1] < COLUMNAS:
+                if vecino not in muros and vecino not in visitados:
+                    visitados[vecino] = actual
+                    cola.append(vecino)
+                    if vecino != fin:
+                        dibujar_celda(ventana, vecino, AZUL)
+        
+        pygame.display.update()
+        pygame.time.delay(20)
+    print("BFS (Etapa 2) Finalizado. No se encontró camino.")
+    return esperar_reinicio(muros, terrenos)
+
+#TERCERA ETAPA KRUSKAL Y PRIM
+def kruskal(puntos, ventana, muros):
+    print("Iniciando algoritmo de Kruskal...")
+
+    print("Kruskal Finalizado.")
+    return esperar_reinicio(muros, terrenos)
+
+def prim(puntos, nodo_raiz, ventana, muros):
+    print(f"Iniciando algoritmo de Prim desde el nodo raíz: {nodo_raiz}...")
+
+    print("Prim Finalizado.")
+    return esperar_reinicio(muros, terrenos)
 
 def dibujar_celda(win, pos, color):
     pygame.draw.rect(win, color, (pos[1]*TAMANO_CELDA, pos[0]*TAMANO_CELDA, TAMANO_CELDA-1, TAMANO_CELDA-1))
+
+def dibujar_arista(ventana, nodo_a, nodo_b, color=NEGRO):
+    pos_a = (nodo_a[1] * TAMANO_CELDA + TAMANO_CELDA // 2, nodo_a[0] * TAMANO_CELDA + TAMANO_CELDA // 2)
+    pos_b = (nodo_b[1] * TAMANO_CELDA + TAMANO_CELDA // 2, nodo_b[0] * TAMANO_CELDA + TAMANO_CELDA // 2)
+    pygame.draw.line(ventana, color, pos_a, pos_b, 3)
+    pygame.display.update()
 
 def esperar_reinicio(muros, terrenos):
     esperando = True
@@ -307,6 +325,7 @@ def main():
     inicio = None
     fin = None
     muros = set()
+    puntos_interes = []
     corriendo = True
 
     etapa = 0
@@ -320,8 +339,12 @@ def main():
 
         for m in muros: dibujar_celda(ventana, m, NEGRO)
         for t in terrenos: dibujar_celda(ventana, t, CAFE)
-        if inicio: dibujar_celda(ventana, inicio, VERDE)
-        if fin: dibujar_celda(ventana, fin, ROJO)
+        if etapa in [1, 2]:
+            if inicio: dibujar_celda(ventana, inicio, VERDE)
+            if fin: dibujar_celda(ventana, fin, ROJO)
+        elif etapa == 3:
+            for p in puntos_interes:
+                dibujar_celda(ventana, p, MORADO)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
@@ -335,16 +358,23 @@ def main():
                     posicion = (fila, col)
 
                     #Primer Click INICIO
-                    if inicio is None:
-                        inicio = posicion
+                    if etapa in [1,2]:
+                        if inicio is None:
+                            inicio = posicion
                
-                    #Segundo click FIN
-                    elif fin is None and posicion != inicio:
-                        fin = posicion
-                        if etapa == 1:
-                            pygame.display.set_caption("Etapa 1: Dibuja Muros (Clic Izq.) - Elige: B, D, L o I")
-                        elif etapa == 2:
-                            pygame.display.set_caption("Etapa 2: Clic Izq = Muros | Clic Der = Lodo. Elige: A o B")
+                        #Segundo click FIN
+                        elif fin is None and posicion != inicio:
+                            fin = posicion
+                            if etapa == 1:
+                                pygame.display.set_caption("Etapa 1: Dibuja Muros (Clic Izq.) - Elige: B, D, L o I")
+                            elif etapa == 2:
+                                pygame.display.set_caption("Etapa 2: Clic Izq = Muros | Clic Der = Lodo. Elige: A o B")
+                    elif etapa == 3:
+                        if posicion not in puntos_interes:
+                            puntos_interes.append(posicion)
+                            id_nodo  = len(puntos_interes) - 1
+                            print(f"Nodo {id_nodo} colocado en las coordenadas: {posicion}")
+                            pygame.display.set_caption(f"Etapa 3: {len(puntos_interes)} nodos. Selecciona algoritmo (K o P)")
 
             if evento.type == pygame.KEYDOWN:
                 if etapa == 0:
@@ -356,11 +386,13 @@ def main():
                         pygame.display.set_caption("Simulador de Grafos: Etapa 2 - Coloca INICIO y FIN")
                     if evento.key == pygame.K_3:
                         etapa = 3
-                        pygame.display.set_caption("Simulador de Grafos: Etapa 3")
+                        puntos_interes.clear()
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Haz clic para colocar nodos dispersos")
                 elif evento.key == pygame.K_x:
                     etapa = 0
                     muros.clear() 
                     terrenos.clear()
+                    puntos_interes.clear()
                     inicio = None
                     fin = None     
                     pygame.display.set_caption("Simulador de Grafos")
@@ -436,10 +468,50 @@ def main():
 
 #ETAPA 3
                 elif etapa == 3 and algoritmo == "":
-                    print("En construccion...")
-                    etapa = 0
+                    if evento.key == pygame.K_k:
+                        algoritmo = "Kruskal"
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Kruskal [Presiona ESPACIO]")
+                    elif evento.key == pygame.K_p:
+                        algoritmo = "Prim"
+                        pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Prim [Presiona ESPACIO]") 
 
-            if etapa != 0 and inicio is not None and fin is not None:
+                elif etapa == 3 and algoritmo != "":
+                    if evento.key == pygame.K_SPACE:
+                        accion = ""
+                        if len(puntos_interes) < 2:
+                            print("Debes colocar al menos 2 nodos de interés para ejecutar el algoritmo.")
+                            continue
+                        if algoritmo == "Kruskal":
+                            print("\n--- Ejecutando Kruskal ---")
+                            accion = kruskal(puntos_interes, ventana, muros)
+                        elif algoritmo == "Prim":
+                            print("\n--- Ejecutando Prim ---")
+                            print(f"Nodos disponibles en el mapa (0 a {len(puntos_interes)-1}):")
+                            for i, p in enumerate(puntos_interes):
+                                print(f"  Nodo {i} -> {p}")
+
+                            valido = False
+                            while not valido:
+                                try:
+                                    raiz = int(input(f"Selecciona el nodo raíz para Prim (0 a {len(puntos_interes)-1}): "))
+                                    if 0 <= raiz < len(puntos_interes):
+                                        valido = True
+                                    else:
+                                        print("Número fuera de rango. Intenta de nuevo.")
+                                except ValueError:
+                                    print("Entrada no válida. Ingresa un número entero.")
+                            print(f"Nodo raíz seleccionado: Nodo {raiz} -> {puntos_interes[raiz]}")
+                            accion = prim(puntos_interes, raiz, ventana, muros)
+                        
+                        if accion == "LIMPIAR":
+                            algoritmo = ""
+                            puntos_interes.clear()
+                            pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Haz clic para colocar nodos dispersos")
+                        elif accion == "REINICIAR":
+                            algoritmo = ""
+                            pygame.display.set_caption(f"Simulador de Grafos: Etapa 3 - {len(puntos_interes)} nodos. Selecciona algoritmo (K o P)")
+
+            if etapa in [1,2] and inicio is not None and fin is not None:
                 if pygame.mouse.get_pressed()[0]:
                     pos = pygame.mouse.get_pos()
                     fila = pos[1]//TAMANO_CELDA
