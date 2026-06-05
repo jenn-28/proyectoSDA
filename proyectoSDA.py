@@ -4,20 +4,27 @@ import collections
 import heapq
 
 terrenos = {}
+puntos_interes = []
 mensaje_estado = ""
 
 # Configuración de colores
-BLANCO = (255, 255, 255) #Mapa
+TEXTO_BLANCO = (255, 255, 255) #Texto en panel
+BLANCO = (48, 54, 46) #Mapa
 NEGRO = (0, 0, 0) #Muros
-GRIS = (200, 200, 200) #Lineas
+GRIS = (40, 40, 40) #Lineas
 VERDE = (0, 255, 0)  # Inicio
 ROJO = (255, 0, 0)    # Fin
 AZUL = (0, 0, 255)    # Explorando BFS
 AMARILLO = (255, 255, 0) # Camino final
-MORADO = (128, 0, 128) # Explorando DFS
+MORADO = (128, 0, 128) #Bunker
 NARANJA = (255, 165, 0) #explorando DLS
 CAFE = (139, 69, 19) # Lodo (costo 5)
 CELESTE = (0, 255, 255)  # Exploración A*
+ROSA = (255, 0, 128)# Explorando DFS
+
+pygame.font.init()
+fuente_bunker_id = pygame.font.SysFont("Arial", 12, bold=True)
+fuente_bunker_coord = pygame.font.SysFont("Arial", 9)
 
 # Dimensiones del mapa
 ANCHO_MAPA = 600
@@ -101,7 +108,7 @@ def dfs(inicio, fin, muros, ventana):
                     conteo = conteo + 1
                     # Dibujar exploración
                     if vecino != fin:
-                        dibujar_celda(ventana, vecino, MORADO)
+                        dibujar_celda(ventana, vecino, ROSA)
         
         pygame.display.update()
         pygame.time.delay(20) # Control de velocidad para ver el proceso
@@ -389,21 +396,98 @@ def prim(puntos, nodo_raiz, ventana, muros, terrenos):
     return esperar_reinicio(muros, terrenos)
 
 def dibujar_celda(win, pos, color):
-    pygame.draw.rect(win, color, (pos[1]*TAMANO_CELDA, pos[0]*TAMANO_CELDA, TAMANO_CELDA-1, TAMANO_CELDA-1))
+    # Coordenadas en píxeles del cuadro actual
+    px = pos[1] * TAMANO_CELDA
+    py = pos[0] * TAMANO_CELDA
+    
+    centro_x = px + TAMANO_CELDA // 2
+    centro_y = py + TAMANO_CELDA // 2
 
-def dibujar_arista(ventana, nodo_a, nodo_b, color=NEGRO, costo=None):
+    # 1. DIBUJAR AL SOBREVIVIENTE
+    if color == VERDE:
+        pygame.draw.rect(win, BLANCO, (px, py, TAMANO_CELDA - 1, TAMANO_CELDA - 1))
+        pygame.draw.circle(win, (0, 150, 0), (centro_x, centro_y - 4), 4) # Cabeza
+        pygame.draw.line(win, (0, 150, 0), (centro_x, centro_y - 1), (centro_x, centro_y + 4), 2) # Cuerpo
+        pygame.draw.line(win, (0, 150, 0), (centro_x - 4, centro_y + 1), (centro_x + 4, centro_y + 1), 2) # Brazos
+        pygame.draw.line(win, (0, 150, 0), (centro_x, centro_y + 4), (centro_x - 3, centro_y + 8), 2) # Piernas
+        pygame.draw.line(win, (0, 150, 0), (centro_x, centro_y + 4), (centro_x + 3, centro_y + 8), 2)
+
+    # 2. DIBUJAR EL REFUGIO
+    elif color == ROJO:
+        pygame.draw.rect(win, BLANCO, (px, py, TAMANO_CELDA - 1, TAMANO_CELDA - 1))
+        techo_puntos = [
+            (px + TAMANO_CELDA // 2, py + 2), 
+            (px + 2, py + TAMANO_CELDA // 2), 
+            (px + TAMANO_CELDA - 4, py + TAMANO_CELDA // 2)
+        ]
+        pygame.draw.polygon(win, (180, 0, 0), techo_puntos) # Techo
+        pygame.draw.rect(win, (150, 0, 0), (px + 4, py + TAMANO_CELDA // 2, TAMANO_CELDA - 9, TAMANO_CELDA // 2 - 2)) # Base
+        pygame.draw.rect(win, NEGRO, (px + TAMANO_CELDA // 2 - 2, py + TAMANO_CELDA - 6, 5, 5)) # Puerta
+
+    # 3. DIBUJAR AL ZOMBIE INFECTADO
+    elif color == NEGRO:
+        pygame.draw.rect(win, BLANCO, (px, py, TAMANO_CELDA - 1, TAMANO_CELDA - 1))
+        # Cabeza
+        pygame.draw.circle(win, (100, 130, 80), (centro_x, centro_y - 4), 4)
+        # Ojos
+        pygame.draw.rect(win, (255, 0, 0), (centro_x - 2, centro_y - 5, 1, 1))
+        pygame.draw.rect(win, (255, 0, 0), (centro_x + 1, centro_y - 5, 1, 1))
+        # Torso
+        pygame.draw.line(win, (70, 90, 60), (centro_x, centro_y - 1), (centro_x, centro_y + 4), 3)
+        # Brazos
+        pygame.draw.line(win, (100, 130, 80), (centro_x, centro_y + 1), (centro_x + 5, centro_y - 1), 2)
+        pygame.draw.line(win, (100, 130, 80), (centro_x, centro_y + 2), (centro_x + 5, centro_y + 2), 2)
+
+    elif color == CAFE:
+        pygame.draw.rect(win, BLANCO, (px, py, TAMANO_CELDA - 1, TAMANO_CELDA - 1))
+        
+        # Bloque principal del edificio derrumbado
+        pygame.draw.rect(win, (110, 115, 120), (px + 3, py + 8, TAMANO_CELDA - 7, TAMANO_CELDA - 11))
+        pygame.draw.rect(win, (85, 90, 95), (px + 6, py + 4, TAMANO_CELDA // 2, TAMANO_CELDA // 3))
+        
+        pygame.draw.rect(win, (110, 115, 120), (px + 2, py + TAMANO_CELDA - 5, 3, 3))
+        pygame.draw.rect(win, (85, 90, 95), (px + TAMANO_CELDA - 6, py + 3, 3, 3))
+        
+        COLOR_OXIDO = (130, 70, 50)
+        pygame.draw.line(win, COLOR_OXIDO, (centro_x - 3, py + 6), (centro_x - 6, py + 1), 1) 
+        pygame.draw.line(win, COLOR_OXIDO, (centro_x + 2, py + 5), (centro_x + 5, py + 2), 1) 
+
+    # 5. DIBUJAR BÚNKER / REFUGIO MILITAR
+    elif color == MORADO:
+        global puntos_interes
+        pygame.draw.rect(win, BLANCO, (px, py, TAMANO_CELDA - 1, TAMANO_CELDA - 1))
+        pygame.draw.circle(win, (100, 105, 110), (centro_x, py + TAMANO_CELDA - 4), TAMANO_CELDA // 2 - 2)
+        pygame.draw.rect(win, (70, 75, 80), (px + 2, py + TAMANO_CELDA - 6, TAMANO_CELDA - 4, 4))
+        pygame.draw.rect(win, (30, 30, 30), (centro_x - 3, py + TAMANO_CELDA - 10, 6, 5))
+        pygame.draw.rect(win, (140, 145, 150), (centro_x - 2, py + 2, 4, 3))
+
+        if pos in puntos_interes:
+            num_bunker = puntos_interes.index(pos)
+            lado_x = px + TAMANO_CELDA + 4
+            
+            texto_id = fuente_bunker_id.render(f"B{num_bunker}", True, (255, 255, 0))
+            win.blit(texto_id, (lado_x, py + 1))
+            
+            texto_coord = fuente_bunker_coord.render(f"({pos[0]},{pos[1]})", True, (255, 255, 255))
+            win.blit(texto_coord, (lado_x, py + 14))
+
+    else:
+        pygame.draw.rect(win, color, (px, py, TAMANO_CELDA - 1, TAMANO_CELDA - 1))
+
+def dibujar_arista(ventana, nodo_a, nodo_b, color=(200, 210, 220), costo=None):
     pos_a = (nodo_a[1] * TAMANO_CELDA + TAMANO_CELDA // 2, nodo_a[0] * TAMANO_CELDA + TAMANO_CELDA // 2)
     pos_b = (nodo_b[1] * TAMANO_CELDA + TAMANO_CELDA // 2, nodo_b[0] * TAMANO_CELDA + TAMANO_CELDA // 2)
     
-    pygame.draw.line(ventana, color, pos_a, pos_b, 3)
+    # Dibujar la línea de conexión
+    pygame.draw.line(ventana, color, pos_a, pos_b, 2)
     
     if costo is not None:
-        fuente_local_arista = pygame.font.SysFont("Arial", 12, bold=True)
+        fuente_grande_arista = pygame.font.SysFont("Arial", 18, bold=True)
         
         medio_x = (pos_a[0] + pos_b[0]) // 2
         medio_y = (pos_a[1] + pos_b[1]) // 2
         
-        texto_costo = fuente_local_arista.render(str(costo), True, (255, 0, 0))
+        texto_costo = fuente_grande_arista.render(str(costo), True, (255, 30, 30))
         
         px = medio_x - (texto_costo.get_width() // 2)
         py = medio_y - (texto_costo.get_height() // 2) - 5 
@@ -443,48 +527,47 @@ def dibujar_panel(win, fuente, etapa, algoritmo,
 
     pygame.draw.rect(
         win,
-        (40, 40, 40),
+        (0, 0, 0),
         (ANCHO_MAPA, 0, ANCHO_PANEL, ALTO)
     )
-    pygame.draw.line(win, BLANCO, (ANCHO_MAPA, 0), (ANCHO_MAPA, ALTO), 3)
+    pygame.draw.line(win, (255, 255, 255), (ANCHO_MAPA, 0), (ANCHO_MAPA, ALTO), 3)
 
     y = 20
     escribir(win, "SIMULADOR DE GRAFOS", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
     y += 40
-    escribir(win, f"Etapa: {etapa}", ANCHO_MAPA + 15, y, fuente)
+    escribir(win, f"Etapa: {etapa}", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
 
     y += 30
-    escribir(win, f"Algoritmo:", ANCHO_MAPA + 15, y, fuente)
+    escribir(win, f"Algoritmo:", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
 
     y += 25
-    escribir(win, algoritmo if algoritmo else "Ninguno", ANCHO_MAPA + 15, y, fuente)
+    escribir(win, algoritmo if algoritmo else "Ninguno", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
 
     y += 50
     
     if etapa == 0:
         escribir(win, "SELECCIONA ETAPA:", ANCHO_MAPA + 15, y, fuente, CELESTE)
         y += 25
-        escribir(win, "1 = Busquedas", ANCHO_MAPA + 15, y, fuente)
+        escribir(win, "1 = Busquedas", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         y += 25
-        escribir(win, "2 = A* y Costos", ANCHO_MAPA + 15, y, fuente)
+        escribir(win, "2 = A* y Costos", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         y += 25
-        escribir(win, "3 = MST", ANCHO_MAPA + 15, y, fuente)
+        escribir(win, "3 = MST", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
 
     elif etapa == 1:
-        # Evaluamos el estado real del juego basándonos en si ya hay algoritmo elegido o no
         if algoritmo == "":
-            escribir(win, "PASO 1: Coloca INICIO", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 1: Coloca INICIO", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 25
-            escribir(win, "PASO 2: Coloca FIN", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 2: Coloca FIN", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 25
-            escribir(win, "PASO 3: Dibuja muros si deseas", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 3: Dibuja zombies si deseas", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 35
             escribir(win, "PASO 4: Elige Algoritmo:", ANCHO_MAPA + 15, y, fuente, CELESTE)
             y += 25
-            escribir(win, "B = BFS | D = DFS", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "B = BFS | D = DFS", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 25
-            escribir(win, "L = DLS | I = IDDFS", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "L = DLS | I = IDDFS", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         else:
             if algoritmo == "LIMITADA":
                 if capturando_entrada:
@@ -492,77 +575,106 @@ def dibujar_panel(win, fuente, etapa, algoritmo,
                     y += 25
                     escribir(win, "-> Luego presiona ENTER", ANCHO_MAPA + 15, y, fuente, VERDE)
                 else:
-                    escribir(win, f"Limite fijado: {texto_entrada}", ANCHO_MAPA + 15, y, fuente, BLANCO)
+                    escribir(win, f"Limite fijado: {texto_entrada}", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
                     y += 25
                     escribir(win, "PASO 6: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
             else:
-                # Para BFS, DFS o IDDFS que no ocupan escribir número
                 escribir(win, "PASO 5: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
     elif etapa == 2:
         if algoritmo == "":
-            escribir(win, "PASO 1: Coloca INICIO", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 1: Coloca INICIO", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 25
-            escribir(win, "PASO 2: Coloca FIN", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 2: Coloca FIN", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 25
-            escribir(win, "PASO 3: Click Izq = Muro | Click Der = Lodo", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 3: Click Izq = zombie | Click Der = derrumbes", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 35
             escribir(win, "PASO 4: Elige Algoritmo:", ANCHO_MAPA + 15, y, fuente, CELESTE)
             y += 25
-            escribir(win, "A = A*  |  B = BFS", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "A = A* |  B = BFS", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         else:
             escribir(win, "PASO 5: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
     elif etapa == 3:
         if algoritmo == "":
-            escribir(win, "PASO 1: Haz Click para colocar nodos", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "PASO 1: Haz Click para colocar bunker", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
             y += 25
             escribir(win, "PASO 2: Elige Algoritmo:", ANCHO_MAPA + 15, y, fuente, CELESTE)
             y += 25
-            escribir(win, "K = Kruskal  |  P = Prim", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "K = Kruskal  |  P = Prim", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         else:
             if algoritmo == "Prim":
                 if capturando_entrada:
-                    escribir(win, "PASO 3: Escribe el nodo raiz", ANCHO_MAPA + 15, y, fuente, NARANJA)
+                    escribir(win, "PASO 3: Escribe el bunker raiz", ANCHO_MAPA + 15, y, fuente, NARANJA)
                     y += 25
                     escribir(win, "-> Luego presiona ENTER", ANCHO_MAPA + 15, y, fuente, VERDE)
                 else:
-                    escribir(win, f"Raiz fijada: {texto_entrada}", ANCHO_MAPA + 15, y, fuente, BLANCO)
+                    escribir(win, f"Raiz fijada: {texto_entrada}", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
                     y += 25
-                    escribir(win, "PASO 4: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
+                    escribir(win, "PASO 4: Presiona ESPACIO para enlazar", ANCHO_MAPA + 15, y, fuente, AMARILLO)
             else:
-                # Para Kruskal que no ocupa escribir número
-                escribir(win, "PASO 3: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
+                escribir(win, "PASO 3: Presiona ESPACIO para enlazar", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
-    # RECUADRO DE ENTRADA DE TEXTO (Mantiene tu misma lógica de renderizado en blanco)
     y += 40
     if capturando_entrada or ((algoritmo == "LIMITADA" or algoritmo == "Prim") and texto_entrada != ""):
         if tipo_entrada == "DLS":
-            escribir(win, "Limite de saltos:", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "Limite de saltos:", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         elif tipo_entrada == "PRIM":
-            escribir(win, "Nodo raiz:", ANCHO_MAPA + 15, y, fuente)
+            escribir(win, "bunker raiz:", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         
-        pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y + 25, 120, 35))
+        pygame.draw.rect(win, (255, 255, 255), (ANCHO_MAPA + 15, y + 25, 120, 35))
         escribir(win, texto_entrada, ANCHO_MAPA + 20, y + 30, fuente, NEGRO)
         y += 60
 
-    # SECCIÓN DE COLORES ESTÁTICA
     y += 20
-    escribir(win, "COLORES", ANCHO_MAPA + 15, y, fuente, GRIS)
+    escribir(win, "LEYENDA DE MAPA", ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
     y += 25
-    pygame.draw.rect(win, VERDE, (ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Inicio", ANCHO_MAPA + 45, y, fuente)
+    
+    #Sobreviviente
+    pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y, 20, 20))
+    pygame.draw.circle(win, (0, 150, 0), (ANCHO_MAPA + 25, y + 6), 3)
+    pygame.draw.line(win, (0, 150, 0), (ANCHO_MAPA + 25, y + 9), (ANCHO_MAPA + 25, y + 15), 2)
+    pygame.draw.line(win, (0, 150, 0), (ANCHO_MAPA + 21, y + 11), (ANCHO_MAPA + 29, y + 11), 2)
+    escribir(win, "Sobreviviente", ANCHO_MAPA + 45, y, fuente, TEXTO_BLANCO)
+    
     y += 25
-    pygame.draw.rect(win, ROJO, (ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Fin", ANCHO_MAPA + 45, y, fuente)
+    #Refugio
+    pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y, 20, 20))
+    pygame.draw.polygon(win, (180, 0, 0), [(ANCHO_MAPA + 25, y + 2), (ANCHO_MAPA + 17, y + 10), (ANCHO_MAPA + 33, y + 10)])
+    pygame.draw.rect(win, (150, 0, 0), (ANCHO_MAPA + 18, y + 10, 14, 8))
+    pygame.draw.rect(win, NEGRO, (ANCHO_MAPA + 24, y + 14, 3, 4))
+    escribir(win, "Refugio Seguro", ANCHO_MAPA + 45, y, fuente, TEXTO_BLANCO)
+    
     y += 25
-    pygame.draw.rect(win, NEGRO, (ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Muro", ANCHO_MAPA + 45, y, fuente)
+    # Zombie
+    pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y, 20, 20))
+    pygame.draw.circle(win, (100, 130, 80), (ANCHO_MAPA + 25, y + 6), 3)
+    pygame.draw.line(win, (70, 90, 60), (ANCHO_MAPA + 25, y + 9), (ANCHO_MAPA + 25, y + 15), 2)
+    pygame.draw.line(win, (100, 130, 80), (ANCHO_MAPA + 25, y + 11), (ANCHO_MAPA + 30, y + 9), 2)
+    escribir(win, "Zombie / Horda", ANCHO_MAPA + 45, y, fuente, TEXTO_BLANCO)
+    
     y += 25
-    pygame.draw.rect(win, CAFE, (ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Lodo", ANCHO_MAPA + 45, y, fuente)
+    #Edificio Derrumbado
+    pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y, 20, 20))
+    pygame.draw.rect(win, (110, 115, 120), (ANCHO_MAPA + 17, y + 8, 16, 9))
+    pygame.draw.rect(win, (85, 90, 95), (ANCHO_MAPA + 20, y + 4, 10, 5))
+    pygame.draw.line(win, (130, 70, 50), (ANCHO_MAPA + 23, y + 4), (ANCHO_MAPA + 21, y + 1), 1)
+    escribir(win, "Edif. Derrumbado", ANCHO_MAPA + 45, y, fuente, TEXTO_BLANCO)
 
-    # SECCIÓN DE RESULTADO FINAL
+    y += 25
+    #Búnker
+    pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y, 20, 20))
+    pygame.draw.circle(win, (100, 105, 110), (ANCHO_MAPA + 25, y + 14), 7) # Domo
+    pygame.draw.rect(win, (70, 75, 80), (ANCHO_MAPA + 16, y + 15, 18, 3))  # Base
+    pygame.draw.rect(win, (30, 30, 30), (ANCHO_MAPA + 23, y + 11, 4, 4))   # Puerta
+    escribir(win, "Búnker Militar", ANCHO_MAPA + 45, y, fuente, TEXTO_BLANCO)
+
+    y += 25
+    #Enlace
+    pygame.draw.rect(win, (0, 0, 0), (ANCHO_MAPA + 15, y, 20, 20))
+    pygame.draw.line(win, (200, 210, 220), (ANCHO_MAPA + 15, y + 10), (ANCHO_MAPA + 35, y + 10), 4)
+    escribir(win, "Enlace de Radio", ANCHO_MAPA + 45, y, fuente, TEXTO_BLANCO)
+
     global mensaje_estado
     y += 35
     escribir(win, "RESULTADO:", ANCHO_MAPA + 15, y, fuente, AMARILLO)
@@ -571,7 +683,7 @@ def dibujar_panel(win, fuente, etapa, algoritmo,
     import textwrap
     lineas = textwrap.wrap(mensaje_estado, width=25)
     for linea in lineas:
-        escribir(win, linea, ANCHO_MAPA + 15, y, fuente)
+        escribir(win, linea, ANCHO_MAPA + 15, y, fuente, TEXTO_BLANCO)
         y += 25
 
 def esperar_reinicio(muros, terrenos):
@@ -598,7 +710,6 @@ def main():
     inicio = None
     fin = None
     muros = set()
-    puntos_interes = []
     corriendo = True
     global mensaje_estado
 
@@ -645,15 +756,15 @@ def main():
                         elif fin is None and posicion != inicio:
                             fin = posicion
                             if etapa == 1:
-                                pygame.display.set_caption("Etapa 1: Dibuja Muros (Clic Izq.) - Elige: B, D, L o I")
+                                pygame.display.set_caption("Etapa 1: Dibuja Zombies (Clic Izq.) - Elige: B, D, L o I")
                             elif etapa == 2:
-                                pygame.display.set_caption("Etapa 2: Clic Izq = Muros | Clic Der = Lodo. Elige: A o B")
+                                pygame.display.set_caption("Etapa 2: Clic Izq = Zombies | Clic Der = Derrumbes. Elige: A o B")
                     elif etapa == 3:
                         if posicion not in puntos_interes:
                             puntos_interes.append(posicion)
                             id_nodo  = len(puntos_interes) - 1
-                            print(f"Nodo {id_nodo} colocado en las coordenadas: {posicion}")
-                            pygame.display.set_caption(f"Etapa 3: {len(puntos_interes)} nodos. Selecciona algoritmo (K o P)")
+                            print(f"Bunker {id_nodo} colocado en las coordenadas: {posicion}")
+                            pygame.display.set_caption(f"Etapa 3: {len(puntos_interes)} búnkeres. Selecciona algoritmo (K o P)")
 
             if evento.type == pygame.KEYDOWN:
                 if capturando_entrada:
@@ -791,31 +902,31 @@ def main():
                         capturando_entrada = True
                         tipo_entrada = "PRIM"
                         texto_entrada = ""
-                        pygame.display.set_caption("Prim -Escribe nodo raiz y ENTER")
+                        pygame.display.set_caption("Prim -Escribe bunker raiz y ENTER")
 
                 elif etapa == 3 and algoritmo != "":
                     if evento.key == pygame.K_SPACE:
                         accion = ""
                         if len(puntos_interes) < 2:
-                            print("Debes colocar al menos 2 nodos de interés para ejecutar el algoritmo.")
+                            print("Debes colocar al menos 2 bunker de interés para ejecutar el algoritmo.")
                             continue
                         if algoritmo == "Kruskal":
                             print("\n--- Ejecutando Kruskal ---")
                             accion = kruskal(puntos_interes, ventana, muros, terrenos)
                         elif algoritmo == "Prim":
                             print("\n--- Ejecutando Prim ---")
-                            print(f"Nodos disponibles en el mapa (0 a {len(puntos_interes)-1}):")
+                            print(f"Búnkeres disponibles en el mapa (0 a {len(puntos_interes)-1}):")
                             for i, p in enumerate(puntos_interes):
-                                print(f"  Nodo {i} -> {p}")
+                                print(f"  Bunker {i} -> {p}")
 
                             if texto_entrada == "":
-                                print("Debes escribir un nodo raiz")
+                                print("Debes escribir un bunker raiz")
                                 continue
 
                             raiz = int(texto_entrada)
 
                             if raiz < 0 or raiz >= len(puntos_interes):
-                                print("Nodo fuera de rango")
+                                print("Bunker fuera de rango")
                                 continue
 
                             accion = prim(puntos_interes,raiz,ventana,muros,terrenos)
@@ -826,13 +937,13 @@ def main():
                             capturando_entrada = False
                             tipo_entrada = ""
                             puntos_interes.clear()
-                            pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Haz clic para colocar nodos dispersos")
+                            pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Haz clic para colocar búnkeres dispersos")
                         elif accion == "REINICIAR":
                             algoritmo = ""
                             texto_entrada = ""
                             capturando_entrada = False
                             tipo_entrada = ""
-                            pygame.display.set_caption(f"Simulador de Grafos: Etapa 3 - {len(puntos_interes)} nodos. Selecciona algoritmo (K o P)")
+                            pygame.display.set_caption(f"Simulador de Grafos: Etapa 3 - {len(puntos_interes)} búnkeres. Selecciona algoritmo (K o P)")
 
             if etapa in [1,2] and inicio is not None and fin is not None:
                 if pygame.mouse.get_pressed()[0]:
