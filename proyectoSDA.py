@@ -319,7 +319,9 @@ def kruskal(puntos, ventana, muros, terrenos):
             dibujar_arista(
                 ventana,
                 puntos[origen],
-                puntos[destino]
+                puntos[destino],
+                color = NEGRO,
+                costo = int(costo)
             )
 
             pygame.display.update()
@@ -368,7 +370,9 @@ def prim(puntos, nodo_raiz, ventana, muros, terrenos):
         dibujar_arista(
             ventana,
             puntos[mejor_origen],
-            puntos[mejor_destino]
+            puntos[mejor_destino],
+            color = NEGRO,
+            costo = int(mejor_costo)
         )
 
         pygame.display.update()
@@ -387,10 +391,25 @@ def prim(puntos, nodo_raiz, ventana, muros, terrenos):
 def dibujar_celda(win, pos, color):
     pygame.draw.rect(win, color, (pos[1]*TAMANO_CELDA, pos[0]*TAMANO_CELDA, TAMANO_CELDA-1, TAMANO_CELDA-1))
 
-def dibujar_arista(ventana, nodo_a, nodo_b, color=NEGRO):
+def dibujar_arista(ventana, nodo_a, nodo_b, color=NEGRO, costo=None):
     pos_a = (nodo_a[1] * TAMANO_CELDA + TAMANO_CELDA // 2, nodo_a[0] * TAMANO_CELDA + TAMANO_CELDA // 2)
     pos_b = (nodo_b[1] * TAMANO_CELDA + TAMANO_CELDA // 2, nodo_b[0] * TAMANO_CELDA + TAMANO_CELDA // 2)
+    
     pygame.draw.line(ventana, color, pos_a, pos_b, 3)
+    
+    if costo is not None:
+        fuente_local_arista = pygame.font.SysFont("Arial", 12, bold=True)
+        
+        medio_x = (pos_a[0] + pos_b[0]) // 2
+        medio_y = (pos_a[1] + pos_b[1]) // 2
+        
+        texto_costo = fuente_local_arista.render(str(costo), True, (255, 0, 0))
+        
+        px = medio_x - (texto_costo.get_width() // 2)
+        py = medio_y - (texto_costo.get_height() // 2) - 5 
+        
+        ventana.blit(texto_costo, (px, py))
+    
     pygame.display.update()
 
 def distancia(a, b):
@@ -420,18 +439,17 @@ def escribir(win, texto, x, y, fuente, color=BLANCO):
     win.blit(superficie, (x, y))
 
 def dibujar_panel(win, fuente, etapa, algoritmo,
-        capturando_entrada, texto_entrada, tipo_entrada):
+                  capturando_entrada, texto_entrada, tipo_entrada):
 
     pygame.draw.rect(
         win,
         (40, 40, 40),
         (ANCHO_MAPA, 0, ANCHO_PANEL, ALTO)
     )
-    pygame.draw.line(win,BLANCO,(ANCHO_MAPA, 0),
-    (ANCHO_MAPA, ALTO),3)
+    pygame.draw.line(win, BLANCO, (ANCHO_MAPA, 0), (ANCHO_MAPA, ALTO), 3)
 
     y = 20
-    escribir(win, "SIMULADOR DE GRAFOS", ANCHO_MAPA + 15, y, fuente)
+    escribir(win, "SIMULADOR DE GRAFOS", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
     y += 40
     escribir(win, f"Etapa: {etapa}", ANCHO_MAPA + 15, y, fuente)
@@ -440,11 +458,13 @@ def dibujar_panel(win, fuente, etapa, algoritmo,
     escribir(win, f"Algoritmo:", ANCHO_MAPA + 15, y, fuente)
 
     y += 25
-    escribir(win, algoritmo if algoritmo else "Ninguno",ANCHO_MAPA + 15, y, fuente)
+    escribir(win, algoritmo if algoritmo else "Ninguno", ANCHO_MAPA + 15, y, fuente)
 
     y += 50
+    
     if etapa == 0:
-
+        escribir(win, "SELECCIONA ETAPA:", ANCHO_MAPA + 15, y, fuente, CELESTE)
+        y += 25
         escribir(win, "1 = Busquedas", ANCHO_MAPA + 15, y, fuente)
         y += 25
         escribir(win, "2 = A* y Costos", ANCHO_MAPA + 15, y, fuente)
@@ -452,76 +472,107 @@ def dibujar_panel(win, fuente, etapa, algoritmo,
         escribir(win, "3 = MST", ANCHO_MAPA + 15, y, fuente)
 
     elif etapa == 1:
-        escribir(win, "PASOS:", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "Click Inicio Y Fin. Dibuja muros y ENTER", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "B = BFS", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "D = DFS", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "L = DLS", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "I = IDDFS", ANCHO_MAPA + 15, y, fuente)
+        # Evaluamos el estado real del juego basándonos en si ya hay algoritmo elegido o no
+        if algoritmo == "":
+            escribir(win, "PASO 1: Coloca INICIO", ANCHO_MAPA + 15, y, fuente)
+            y += 25
+            escribir(win, "PASO 2: Coloca FIN", ANCHO_MAPA + 15, y, fuente)
+            y += 25
+            escribir(win, "PASO 3: Dibuja muros si deseas", ANCHO_MAPA + 15, y, fuente)
+            y += 35
+            escribir(win, "PASO 4: Elige Algoritmo:", ANCHO_MAPA + 15, y, fuente, CELESTE)
+            y += 25
+            escribir(win, "B = BFS | D = DFS", ANCHO_MAPA + 15, y, fuente)
+            y += 25
+            escribir(win, "L = DLS | I = IDDFS", ANCHO_MAPA + 15, y, fuente)
+        else:
+            if algoritmo == "LIMITADA":
+                if capturando_entrada:
+                    escribir(win, "PASO 5: Escribe el numero de limite", ANCHO_MAPA + 15, y, fuente, NARANJA)
+                    y += 25
+                    escribir(win, "-> Luego presiona ENTER", ANCHO_MAPA + 15, y, fuente, VERDE)
+                else:
+                    escribir(win, f"Limite fijado: {texto_entrada}", ANCHO_MAPA + 15, y, fuente, BLANCO)
+                    y += 25
+                    escribir(win, "PASO 6: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
+            else:
+                # Para BFS, DFS o IDDFS que no ocupan escribir número
+                escribir(win, "PASO 5: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
     elif etapa == 2:
-        escribir(win, "Click Izq = Muro", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "Click Der = Lodo", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "A = A*", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "B = BFS", ANCHO_MAPA + 15, y, fuente)
+        if algoritmo == "":
+            escribir(win, "PASO 1: Coloca INICIO", ANCHO_MAPA + 15, y, fuente)
+            y += 25
+            escribir(win, "PASO 2: Coloca FIN", ANCHO_MAPA + 15, y, fuente)
+            y += 25
+            escribir(win, "PASO 3: Click Izq = Muro | Click Der = Lodo", ANCHO_MAPA + 15, y, fuente)
+            y += 35
+            escribir(win, "PASO 4: Elige Algoritmo:", ANCHO_MAPA + 15, y, fuente, CELESTE)
+            y += 25
+            escribir(win, "A = A*  |  B = BFS", ANCHO_MAPA + 15, y, fuente)
+        else:
+            escribir(win, "PASO 5: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
     elif etapa == 3:
-        escribir(win, "Coloca nodos", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "K = Kruskal", ANCHO_MAPA + 15, y, fuente)
-        y += 25
-        escribir(win, "P = Prim", ANCHO_MAPA + 15, y, fuente)
-    y += 60
-    escribir(win, "COLORES", ANCHO_MAPA + 15, y, fuente)
-    y += 30
-    pygame.draw.rect(win, VERDE,(ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Inicio", ANCHO_MAPA + 45, y, fuente)
-    y += 30
-    pygame.draw.rect(win, ROJO,(ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Fin", ANCHO_MAPA + 45, y, fuente)
-    y += 30
-    pygame.draw.rect(win, NEGRO,(ANCHO_MAPA + 15, y, 20, 20))
-    escribir(win, "Muro", ANCHO_MAPA + 45, y, fuente)
+        if algoritmo == "":
+            escribir(win, "PASO 1: Haz Click para colocar nodos", ANCHO_MAPA + 15, y, fuente)
+            y += 25
+            escribir(win, "PASO 2: Elige Algoritmo:", ANCHO_MAPA + 15, y, fuente, CELESTE)
+            y += 25
+            escribir(win, "K = Kruskal  |  P = Prim", ANCHO_MAPA + 15, y, fuente)
+        else:
+            if algoritmo == "Prim":
+                if capturando_entrada:
+                    escribir(win, "PASO 3: Escribe el nodo raiz", ANCHO_MAPA + 15, y, fuente, NARANJA)
+                    y += 25
+                    escribir(win, "-> Luego presiona ENTER", ANCHO_MAPA + 15, y, fuente, VERDE)
+                else:
+                    escribir(win, f"Raiz fijada: {texto_entrada}", ANCHO_MAPA + 15, y, fuente, BLANCO)
+                    y += 25
+                    escribir(win, "PASO 4: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
+            else:
+                # Para Kruskal que no ocupa escribir número
+                escribir(win, "PASO 3: Presiona ESPACIO para correr", ANCHO_MAPA + 15, y, fuente, AMARILLO)
 
-    y += 30
-    pygame.draw.rect(win, CAFE,(ANCHO_MAPA + 15, y, 20, 20))
+    # RECUADRO DE ENTRADA DE TEXTO (Mantiene tu misma lógica de renderizado en blanco)
+    y += 40
+    if capturando_entrada or ((algoritmo == "LIMITADA" or algoritmo == "Prim") and texto_entrada != ""):
+        if tipo_entrada == "DLS":
+            escribir(win, "Limite de saltos:", ANCHO_MAPA + 15, y, fuente)
+        elif tipo_entrada == "PRIM":
+            escribir(win, "Nodo raiz:", ANCHO_MAPA + 15, y, fuente)
+        
+        pygame.draw.rect(win, BLANCO, (ANCHO_MAPA + 15, y + 25, 120, 35))
+        escribir(win, texto_entrada, ANCHO_MAPA + 20, y + 30, fuente, NEGRO)
+        y += 60
+
+    # SECCIÓN DE COLORES ESTÁTICA
+    y += 20
+    escribir(win, "COLORES", ANCHO_MAPA + 15, y, fuente, GRIS)
+    y += 25
+    pygame.draw.rect(win, VERDE, (ANCHO_MAPA + 15, y, 20, 20))
+    escribir(win, "Inicio", ANCHO_MAPA + 45, y, fuente)
+    y += 25
+    pygame.draw.rect(win, ROJO, (ANCHO_MAPA + 15, y, 20, 20))
+    escribir(win, "Fin", ANCHO_MAPA + 45, y, fuente)
+    y += 25
+    pygame.draw.rect(win, NEGRO, (ANCHO_MAPA + 15, y, 20, 20))
+    escribir(win, "Muro", ANCHO_MAPA + 45, y, fuente)
+    y += 25
+    pygame.draw.rect(win, CAFE, (ANCHO_MAPA + 15, y, 20, 20))
     escribir(win, "Lodo", ANCHO_MAPA + 45, y, fuente)
 
-    if capturando_entrada:
-        y += 40
-
-    if tipo_entrada == "DLS":
-        escribir(win,"Limite de saltos:", ANCHO_MAPA + 15,y+10,fuente)
-
-    elif tipo_entrada == "PRIM":
-        escribir(win,"Nodo raiz:",ANCHO_MAPA + 15,y+10, fuente)
-    pygame.draw.rect(win,BLANCO,(ANCHO_MAPA + 15, y + 30, 120, 35))
-
-    escribir(win,texto_entrada,ANCHO_MAPA + 20,y + 35,fuente,NEGRO)
-
+    # SECCIÓN DE RESULTADO FINAL
     global mensaje_estado
-    y += 60
-
-    escribir(win,"RESULTADO:",ANCHO_MAPA + 15,y+10,fuente)
     y += 35
-    lineas = []
-    texto = mensaje_estado
-
+    escribir(win, "RESULTADO:", ANCHO_MAPA + 15, y, fuente, AMARILLO)
+    y += 25
+    
     import textwrap
     lineas = textwrap.wrap(mensaje_estado, width=25)
     for linea in lineas:
-        escribir(win,linea,ANCHO_MAPA + 15, y, fuente)
+        escribir(win, linea, ANCHO_MAPA + 15, y, fuente)
         y += 25
-
-    lineas.append(texto)
 
 def esperar_reinicio(muros, terrenos):
     esperando = True
@@ -616,16 +667,29 @@ def main():
                 if etapa == 0:
                     if evento.key == pygame.K_1:
                         etapa = 1
+                        algoritmo = ""   
+                        texto_entrada = ""   
+                        capturando_entrada = False
                         pygame.display.set_caption("Simulador de Grafos: Etapa 1 - Coloca INICIO y FIN")
                     if evento.key == pygame.K_2:
                         etapa = 2
+                        algoritmo = ""     
+                        texto_entrada = ""   
+                        capturando_entrada = False
                         pygame.display.set_caption("Simulador de Grafos: Etapa 2 - Coloca INICIO y FIN")
                     if evento.key == pygame.K_3:
                         etapa = 3
+                        algoritmo = ""     
+                        texto_entrada = ""    
+                        capturando_entrada = False
                         puntos_interes.clear()
                         pygame.display.set_caption("Simulador de Grafos: Etapa 3 - Haz clic para colocar nodos dispersos")
                 elif evento.key == pygame.K_x:
                     etapa = 0
+                    algoritmo = ""           
+                    texto_entrada = ""        
+                    capturando_entrada = False  
+                    tipo_entrada = ""        
                     muros.clear() 
                     terrenos.clear()
                     puntos_interes.clear()
